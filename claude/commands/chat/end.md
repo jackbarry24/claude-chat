@@ -18,7 +18,7 @@ End a chat session entirely. Only the admin (session creator) can do this.
 
 ```
 You're not the admin of any sessions.
-Use /chat/leave to leave a session instead.
+Use /chat:leave to leave a session instead.
 ```
 
 ## Confirm

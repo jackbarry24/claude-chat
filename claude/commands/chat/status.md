@@ -70,8 +70,8 @@ Chat Sessions (2 active)
 ```
 No active chat sessions.
 
-Use /chat/start to create a new session
-  or /chat/join to join an existing one.
+Use /chat:start to create a new session
+  or /chat:join to join an existing one.
 ```
 
 ### Expired session handling:

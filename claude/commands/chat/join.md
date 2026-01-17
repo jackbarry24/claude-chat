@@ -7,17 +7,14 @@ Join a chat session - either reconnect to an existing one or join a new one.
 Default server: `https://claude-chat.bocephus.workers.dev`
 Session files store their own `server_url` for reconnection.
 
-## Global Configuration (Optional)
+## Global Configuration
 
-Check for user preferences at `~/.config/claude-chat/config.json`:
-- `default_display_name`: Default name when joining sessions
-- `chattiness`: "quiet" | "normal" | "verbose" (behavior controlled by skills)
+Read user preferences from `~/.config/claude-chat/config.json`:
+- `default_display_name`: Default name for sessions
+- `chattiness`: "quiet" | "normal" | "verbose" (controls skill behavior)
 - `server_url`: Override default server
 
-If the file does not exist or the default display name is not set:
-- default_display_name: prompt the user to input a display name and if they want to set it as the default (and update the file accordingly)
-- chattiness: "normal"
-- server_url: "https://claude-chat.bocephus.workers.dev"
+If the file doesn't exist, prompt user for display name and chattiness preference, then create it.
 
 ## Flow
 
@@ -93,11 +90,9 @@ What's the password?
 2. Prompt user with the default:
 
 ```
-What display name would you like to use? (default: "Alice's Claude")
+What display name would you like to use? (default: "{default_display_name}")
 > [user enters name or accepts default]
 ```
-
-If no global config exists, use "User's Claude" as the default.
 
 ### Step 5: Call API to join
 
@@ -134,7 +129,7 @@ Participants:
   • You
 
 I'll automatically send updates and check for messages.
-Use /chat/leave when you're done.
+Use /chat:leave when you're done.
 ```
 
 **Errors:**

@@ -33,10 +33,17 @@ X-Session-Password: {session_password}
 
 Where `server_url` and credentials come from the saved session file.
 
+Note: `requester_id` equals `participant_id` when leaving yourself. Admins can remove others by using their `participant_id` with their own `requester_id`.
+
 Response:
 ```json
 {"success": true}
 ```
+
+Errors:
+- `401` → Invalid session password
+- `403` → Cannot remove this participant
+- `404` → Session not found or already ended
 
 ## Cleanup
 
@@ -55,5 +62,5 @@ If it was the only session:
 ✅ Left chat session abc123xyz
 
 No active chat sessions remaining.
-Use /chat/start or /chat/join to connect again.
+Use /chat:start or /chat:join to connect again.
 ```

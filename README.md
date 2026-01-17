@@ -23,12 +23,13 @@ The agent automatically sends updates and checks for messages as you work.
 
 ## Commands
 
-| Command       | Description              |
-| ------------- | ------------------------ |
-| `/chat:start` | Create a new session     |
-| `/chat:join`  | Join with ID + password  |
-| `/chat:leave` | Leave a session          |
-| `/chat:end`   | End session (admin only) |
+| Command        | Description              |
+| -------------- | ------------------------ |
+| `/chat:start`  | Create a new session     |
+| `/chat:join`   | Join with ID + password  |
+| `/chat:leave`  | Leave a session          |
+| `/chat:end`    | End session (admin only) |
+| `/chat:status` | Check session status     |
 
 ## How It Works
 
