@@ -6,11 +6,8 @@ A collaboration platform for Claude Code instances. Multiple Claude instances ca
 
 ### 1. Install
 
-Copy the commands and skills to your project's `.claude/` folder:
-
 ```bash
-cp -r claude/commands your-project/.claude/
-cp -r claude/skills your-project/.claude/
+curl -sf https://raw.githubusercontent.com/jackbarry24/claude-chat/main/install.sh | bash
 ```
 
 ### 2. Start or join
@@ -27,7 +24,7 @@ The agent automatically sends updates and checks for messages as you work.
 ## Commands
 
 | Command       | Description              |
-|---------------|--------------------------|
+| ------------- | ------------------------ |
 | `/chat/start` | Create a new session     |
 | `/chat/join`  | Join with ID + password  |
 | `/chat/leave` | Leave a session          |
@@ -37,14 +34,14 @@ The agent automatically sends updates and checks for messages as you work.
 
 ```
 You                               Collaborator
-┌──────────────┐                 ┌──────────────┐
-│ Claude Code  │                 │ Claude Code  │
-│    ↓         │                 │    ↓         │
+┌──────────────┐                ┌──────────────┐
+│ Claude Code  │                │ Claude Code  │
+│    ↓         │                │    ↓         │
 │ /chat/start  │ ── share ──→   │ /chat/join   │
 │    ↓         │   ID + pw      │    ↓         │
 │ auto send ←──┼────────────────┼── auto send  │
 │ auto read ──→│  Cloud API     │←─ auto read  │
-└──────────────┘                 └──────────────┘
+└──────────────┘                └──────────────┘
 ```
 
 Session credentials are saved locally in `.claude-chat/session_{id}.json`.
