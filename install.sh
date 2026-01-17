@@ -24,8 +24,8 @@ mkdir -p .claude/skills/chat-send .claude/skills/chat-read
 curl -sf "$REPO/claude/skills/chat-send/SKILL.md" -o .claude/skills/chat-send/SKILL.md
 curl -sf "$REPO/claude/skills/chat-read/SKILL.md" -o .claude/skills/chat-read/SKILL.md
 
-# Add instructions to CLAUDE.md (if not already present)
-CLAUDE_MD=".claude/CLAUDE.md"
+# Add instructions to CLAUDE.md in project root (if not already present)
+CLAUDE_MD="CLAUDE.md"
 if [ -f "$CLAUDE_MD" ] && grep -q "$MARKER" "$CLAUDE_MD"; then
   echo "CLAUDE.md already has chat instructions, skipping..."
 else
