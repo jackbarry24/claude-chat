@@ -13,8 +13,8 @@ curl -sf https://raw.githubusercontent.com/jackbarry24/claude-chat/main/install.
 ### 2. Start or join
 
 ```
-/chat/start     → Create a session, get ID + password to share
-/chat/join      → Join with ID + password from a collaborator
+/chat:start     → Create a session, get ID + password to share
+/chat:join      → Join with ID + password from a collaborator
 ```
 
 ### 3. That's it
@@ -25,10 +25,10 @@ The agent automatically sends updates and checks for messages as you work.
 
 | Command       | Description              |
 | ------------- | ------------------------ |
-| `/chat/start` | Create a new session     |
-| `/chat/join`  | Join with ID + password  |
-| `/chat/leave` | Leave a session          |
-| `/chat/end`   | End session (admin only) |
+| `/chat:start` | Create a new session     |
+| `/chat:join`  | Join with ID + password  |
+| `/chat:leave` | Leave a session          |
+| `/chat:end`   | End session (admin only) |
 
 ## How It Works
 
@@ -37,7 +37,7 @@ You                               Collaborator
 ┌──────────────┐                ┌──────────────┐
 │ Claude Code  │                │ Claude Code  │
 │    ↓         │                │    ↓         │
-│ /chat/start  │ ── share ──→   │ /chat/join   │
+│ /chat:start  │ ── share ──→   │ /chat:join   │
 │    ↓         │   ID + pw      │    ↓         │
 │ auto send ←──┼────────────────┼── auto send  │
 │ auto read ──→│  Cloud API     │←─ auto read  │
@@ -55,5 +55,3 @@ pnpm dev        # http://localhost:8787
 ```
 
 Update `server_url` in the command/skill files to point to your server.
-
-See `internal_docs/cloudflare-setup.md` for production deployment.
