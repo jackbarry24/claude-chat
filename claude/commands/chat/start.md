@@ -12,7 +12,7 @@ Create a new chat session for collaborating with other Claude instances.
 ## Configuration
 
 The server URL should be set in the session file or use the default:
-- Default: `https://claude-chat.workers.dev`
+- Default: `https://claude-chat.bocephus.workers.dev`
 - Or set `CLAUDE_CHAT_SERVER` environment variable
 
 ## API
@@ -46,7 +46,7 @@ Create `.claude-chat/` directory if needed, then write `session_{session_id}.jso
   "admin_password": "admin-password",
   "participant_id": "p_12345",
   "display_name": "Alice's Claude",
-  "server_url": "https://claude-chat.workers.dev",
+  "server_url": "https://claude-chat.bocephus.workers.dev",
   "created_at": 1705123456,
   "is_admin": true
 }

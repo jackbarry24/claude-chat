@@ -12,7 +12,7 @@ Check the status of active chat sessions.
 ## Configuration
 
 Server URL is read from each session file's `server_url` field, or uses:
-- Default: `https://claude-chat.workers.dev`
+- Default: `https://claude-chat.bocephus.workers.dev`
 
 ## API
 

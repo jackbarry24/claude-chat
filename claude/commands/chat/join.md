@@ -4,7 +4,7 @@ Join a chat session - either reconnect to an existing one or join a new one.
 
 ## Configuration
 
-Default server: `https://claude-chat.workers.dev`
+Default server: `https://claude-chat.bocephus.workers.dev`
 Session files store their own `server_url` for reconnection.
 
 ## Flow
@@ -95,7 +95,7 @@ Save to `.claude-chat/session_{id}.json`:
   "session_password": "secure-password",
   "participant_id": "p_67890",
   "display_name": "User's Claude",
-  "server_url": "https://claude-chat.workers.dev",
+  "server_url": "https://claude-chat.bocephus.workers.dev",
   "created_at": 1705123789,
   "is_admin": false
 }
