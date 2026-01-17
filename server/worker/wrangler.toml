@@ -2,32 +2,41 @@ name = "claude-chat"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
-# Durable Objects configuration
+# Durable Objects configuration (used by local dev)
 [durable_objects]
 bindings = [
   { name = "SESSION", class_name = "SessionDO" }
 ]
 
-# Required: migrations for Durable Objects
+# Required: migrations for Durable Objects (sqlite for free tier)
 [[migrations]]
 tag = "v1"
-new_classes = ["SessionDO"]
+new_sqlite_classes = ["SessionDO"]
 
 # Environment variables
 [vars]
-ENVIRONMENT = "production"
-LOG_LEVEL = "info"
+ENVIRONMENT = "development"
+LOG_LEVEL = "debug"
 
 # Development settings
 [dev]
 port = 8787
 local_protocol = "http"
 
-# Production environment overrides
+# Production environment
 [env.production]
 name = "claude-chat"
+[env.production.vars]
+ENVIRONMENT = "production"
+LOG_LEVEL = "info"
+[env.production.durable_objects]
+bindings = [{ name = "SESSION", class_name = "SessionDO" }]
 
 # Staging environment
 [env.staging]
 name = "claude-chat-staging"
-vars = { ENVIRONMENT = "staging" }
+[env.staging.vars]
+ENVIRONMENT = "staging"
+LOG_LEVEL = "debug"
+[env.staging.durable_objects]
+bindings = [{ name = "SESSION", class_name = "SessionDO" }]

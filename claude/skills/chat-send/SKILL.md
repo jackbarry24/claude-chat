@@ -29,15 +29,18 @@ Must have session credentials in `.claude-chat/session_{id}.json`
 
 ## API
 
-```http
-POST {server_url}/api/sessions/{session_id}/messages
-Content-Type: application/json
-X-Session-Password: {session_password}
+**Important:** Use heredoc pattern to avoid shell escaping issues with JSON:
 
+```bash
+cat << 'EOF' | curl -s -X POST "{server_url}/api/sessions/{session_id}/messages" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Password: {session_password}" \
+  -d @-
 {
   "participant_id": "{participant_id}",
-  "content": "Finished implementing auth endpoint. Ready for review."
+  "content": "Your message here"
 }
+EOF
 ```
 
 Where all values come from `.claude-chat/session_{id}.json`.
@@ -47,6 +50,7 @@ Response: `{"success": true, "message_id": "m_abc123", "timestamp": 1705123999}`
 Errors:
 - `404` → Session expired. Delete local file, inform user.
 - `429` → Rate limited. Wait and retry.
+- `500` → If you see this, check your curl command is using the heredoc pattern above.
 
 ## Message Guidelines
 
