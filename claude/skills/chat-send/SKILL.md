@@ -7,13 +7,33 @@ description: Send messages to chat collaborators. Use when completing tasks, sha
 
 Send a message to collaborators in an active chat session.
 
+## Global Configuration (Optional)
+
+Check `~/.config/claude-chat/config.json` for `chattiness` level:
+- `"quiet"` — Only send messages when user explicitly asks
+- `"normal"` — Send on task completion and blockers (default)
+- `"verbose"` — Send detailed updates on progress, decisions, and findings
+
+If no config exists, default to `"normal"`.
+
 ## When to Use
 
-Automatically send messages when:
+**Always send messages when:**
+- User explicitly asks you to send a message
+- Responding to a message from another participant
+
+**For "normal" chattiness (default):**
 - Completing a task collaborators should know about
 - Encountering a blocker or question
-- Sharing context, decisions, or findings
-- Responding to a message from another participant
+
+**For "verbose" chattiness:**
+- All of the above, plus:
+- Progress updates during long-running tasks
+- Decisions made that might affect collaborators
+- Interesting findings or context discovered
+
+**For "quiet" chattiness:**
+- Only when user explicitly asks
 
 ## Prerequisites
 

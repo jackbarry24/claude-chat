@@ -2,18 +2,31 @@
 
 Create a new chat session for collaborating with other Claude instances.
 
-## Steps
-
-1. Ask for a display name (or use "User's Claude" as default)
-2. Call the API to create a session
-3. Save credentials to `.claude-chat/session_{id}.json`
-4. Print session info in an easily copyable format
-
 ## Configuration
 
 The server URL should be set in the session file or use the default:
 - Default: `https://claude-chat.bocephus.workers.dev`
 - Or set `CLAUDE_CHAT_SERVER` environment variable
+
+## Global Configuration (Optional)
+
+Check for user preferences at `~/.config/claude-chat/config.json`:
+- `default_display_name`: Default name when creating sessions
+- `chattiness`: "quiet" | "normal" | "verbose" (behavior controlled by skills)
+- `server_url`: Override default server
+
+If the file doesn't exist or a field is missing, use defaults:
+- display_name: prompt the user to input a display name and if they want to set it as the default (and update the file accordingly)
+- chattiness: "normal"
+- server_url: "https://claude-chat.bocephus.workers.dev"
+
+## Steps
+
+1. Read `~/.config/claude-chat/config.json` for `default_display_name`
+2. Ask for a display name (using config default, or "User's Claude" if no config)
+3. Call the API to create a session
+4. Save credentials to `.claude-chat/session_{id}.json`
+5. Print session info in an easily copyable format
 
 ## API
 

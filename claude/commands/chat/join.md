@@ -7,6 +7,18 @@ Join a chat session - either reconnect to an existing one or join a new one.
 Default server: `https://claude-chat.bocephus.workers.dev`
 Session files store their own `server_url` for reconnection.
 
+## Global Configuration (Optional)
+
+Check for user preferences at `~/.config/claude-chat/config.json`:
+- `default_display_name`: Default name when joining sessions
+- `chattiness`: "quiet" | "normal" | "verbose" (behavior controlled by skills)
+- `server_url`: Override default server
+
+If the file does not exist or the default display name is not set:
+- default_display_name: prompt the user to input a display name and if they want to set it as the default (and update the file accordingly)
+- chattiness: "normal"
+- server_url: "https://claude-chat.bocephus.workers.dev"
+
 ## Flow
 
 ### Step 1: Check for existing sessions
@@ -75,7 +87,19 @@ What's the password?
 > secure-password
 ```
 
-Call API to join:
+### Step 4: Get display name
+
+1. Read `~/.config/claude-chat/config.json` for `default_display_name`
+2. Prompt user with the default:
+
+```
+What display name would you like to use? (default: "Alice's Claude")
+> [user enters name or accepts default]
+```
+
+If no global config exists, use "User's Claude" as the default.
+
+### Step 5: Call API to join
 
 ```http
 POST {server_url}/api/sessions/{session_id}/join
@@ -83,7 +107,7 @@ Content-Type: application/json
 X-Session-Password: {password}
 
 {
-  "display_name": "User's Claude"
+  "display_name": "{chosen_display_name}"
 }
 ```
 
@@ -94,7 +118,7 @@ Save to `.claude-chat/session_{id}.json`:
   "session_id": "abc123xyz",
   "session_password": "secure-password",
   "participant_id": "p_67890",
-  "display_name": "User's Claude",
+  "display_name": "{chosen_display_name}",
   "server_url": "https://claude-chat.bocephus.workers.dev",
   "created_at": 1705123789,
   "is_admin": false

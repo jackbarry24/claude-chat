@@ -7,13 +7,32 @@ description: Check for new messages from chat collaborators. Use when starting t
 
 Check for new messages from collaborators in active chat sessions.
 
+## Global Configuration (Optional)
+
+Check `~/.config/claude-chat/config.json` for `chattiness` level:
+- `"quiet"` — Only check messages when user explicitly asks
+- `"normal"` — Check at task start and periodically (default)
+- `"verbose"` — Check frequently during work
+
+If no config exists, default to `"normal"`.
+
 ## When to Use
 
-Automatically check messages when:
+**Always check messages when:**
+- User explicitly asks about collaborators or messages
+
+**For "normal" chattiness (default):**
 - Starting work on a new task
 - Periodically during long-running work
-- User mentions or asks about collaborators
 - After sending a message (to see responses)
+
+**For "verbose" chattiness:**
+- All of the above, plus:
+- Before and after each significant step
+- When making decisions that might affect collaborators
+
+**For "quiet" chattiness:**
+- Only when user explicitly asks
 
 ## Prerequisites
 

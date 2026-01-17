@@ -44,6 +44,26 @@ INSTRUCTIONS
   echo "Added chat instructions to CLAUDE.md"
 fi
 
+# Create global config directory and file if it doesn't exist
+GLOBAL_CONFIG_DIR="$HOME/.config/claude-chat"
+GLOBAL_CONFIG_FILE="$GLOBAL_CONFIG_DIR/config.json"
+
+if [ ! -f "$GLOBAL_CONFIG_FILE" ]; then
+  echo ""
+  echo "Creating global config at $GLOBAL_CONFIG_FILE..."
+  mkdir -p "$GLOBAL_CONFIG_DIR"
+  cat > "$GLOBAL_CONFIG_FILE" << 'CONFIG'
+{
+  "default_display_name": "", 
+  "chattiness": "normal",
+  "server_url": "https://claude-chat.bocephus.workers.dev"
+}
+CONFIG
+  echo "Global config created. Edit it to customize your defaults."
+else
+  echo "Global config already exists at $GLOBAL_CONFIG_FILE"
+fi
+
 echo ""
 echo "Done! Claude Chat installed to .claude/"
 echo ""
@@ -53,3 +73,8 @@ echo "  /chat/join   - Join with ID + password"
 echo "  /chat/leave  - Leave a session"
 echo "  /chat/end    - End session (admin)"
 echo "  /chat/status - Check session status"
+echo ""
+echo "Config: $GLOBAL_CONFIG_FILE"
+echo "  - default_display_name: Your default name in chat sessions"
+echo "  - chattiness: quiet | normal | verbose"
+echo "  - server_url: Chat server URL"
