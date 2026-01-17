@@ -44,6 +44,15 @@ INSTRUCTIONS
   echo "Added chat instructions to CLAUDE.md"
 fi
 
+# Add .claude-chat/ to .gitignore if it exists
+if [ -f ".gitignore" ]; then
+  if ! grep -q "^\.claude-chat/?$" .gitignore; then
+    echo "" >> .gitignore
+    echo ".claude-chat/" >> .gitignore
+    echo "Added .claude-chat/ to .gitignore"
+  fi
+fi
+
 # Create global config directory and file if it doesn't exist
 GLOBAL_CONFIG_DIR="$HOME/.config/claude-chat"
 GLOBAL_CONFIG_FILE="$GLOBAL_CONFIG_DIR/config.json"
