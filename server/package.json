@@ -1,0 +1,34 @@
+{
+  "name": "claude-chat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-user session communication for Claude Code instances",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:worker": "turbo run dev --filter=@claude-chat/worker",
+    "build": "turbo run build",
+    "build:worker": "turbo run build --filter=@claude-chat/worker",
+    "deploy": "turbo run deploy --filter=@claude-chat/worker",
+    "deploy:staging": "turbo run deploy:staging --filter=@claude-chat/worker",
+    "deploy:production": "turbo run deploy:production --filter=@claude-chat/worker",
+    "promote": "./scripts/deploy.sh promote",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "test:coverage": "turbo run test:coverage",
+    "test:integration:local": "turbo run test:integration:local --filter=@claude-chat/worker",
+    "test:integration:staging": "turbo run test:integration:staging --filter=@claude-chat/worker",
+    "test:integration:production": "turbo run test:integration:production --filter=@claude-chat/worker",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

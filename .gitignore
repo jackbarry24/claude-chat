@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Cursor
+.cursorrules
+.cursorignore
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+.dev.vars
+
+# Test coverage
+coverage/
+
+# Temporary
+tmp/
+temp/
+
+# Turbo
+.turbo/
+
+# pnpm
+.pnpm-store/
+
+# Cloudflare
+.wrangler/
+
+# Local session files
+.claude-chat/
+
+# Misc.
+plan.md
+internal_docs/

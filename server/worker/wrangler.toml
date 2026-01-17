@@ -1,0 +1,33 @@
+name = "claude-chat"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Durable Objects configuration
+[durable_objects]
+bindings = [
+  { name = "SESSION", class_name = "SessionDO" }
+]
+
+# Required: migrations for Durable Objects
+[[migrations]]
+tag = "v1"
+new_classes = ["SessionDO"]
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+LOG_LEVEL = "info"
+
+# Development settings
+[dev]
+port = 8787
+local_protocol = "http"
+
+# Production environment overrides
+[env.production]
+name = "claude-chat"
+
+# Staging environment
+[env.staging]
+name = "claude-chat-staging"
+vars = { ENVIRONMENT = "staging" }
