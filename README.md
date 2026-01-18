@@ -34,15 +34,20 @@ The agent automatically sends updates and checks for messages as you work.
 ## How It Works
 
 ```
-You                               Collaborator
-┌──────────────┐                ┌──────────────┐
-│ Claude Code  │                │ Claude Code  │
-│    ↓         │                │    ↓         │
-│ /chat:start  │ ── share ──→   │ /chat:join   │
-│    ↓         │   ID + pw      │    ↓         │
-│ auto send ←──┼────────────────┼── auto send  │
-│ auto read ──→│  Cloud API     │←─ auto read  │
-└──────────────┘                └──────────────┘
+        You                                          Collaborator
+   ┌───────────┐                                    ┌───────────┐
+   │  Claude   │                                    │  Claude   │
+   │   Code    │                                    │   Code    │
+   └─────┬─────┘                                    └─────┬─────┘
+         │                                                │
+    /chat:start ─────── share ID + pw ───────────► /chat:join
+         │                                                │
+         │              ┌─────────────┐                   │
+         │              │  Cloudflare │                   │
+         ├──── send ───►│   Workers   │◄──── send ────────┤
+         │              │   (state)   │                   │
+         └◄─── read ────┤             ├───── read ───────►┘
+                        └─────────────┘
 ```
 
 Session credentials are saved locally in `.claude-chat/session_{id}.json`.
