@@ -1,35 +1,36 @@
 {
-  "name": "@claude-chat/worker",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Cloudflare Worker for Claude Chat",
-  "type": "module",
-  "scripts": {
-    "dev": "wrangler dev",
-    "build": "wrangler deploy --dry-run --outdir=dist",
-    "deploy": "wrangler deploy",
-    "deploy:staging": "wrangler deploy --env staging",
-    "deploy:production": "wrangler deploy --env production",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:integration:local": "SERVER_URL=http://localhost:8787 vitest run --config vitest.integration.config.ts",
-    "test:integration:staging": "SERVER_URL=https://claude-chat-staging.workers.dev vitest run --config vitest.integration.config.ts",
-    "test:integration:production": "SERVER_URL=https://claude-chat.workers.dev vitest run --config vitest.integration.config.ts",
-    "typecheck": "tsc --noEmit",
-    "tail": "wrangler tail",
-    "tail:staging": "wrangler tail --env staging",
-    "clean": "rm -rf dist .wrangler"
-  },
-  "dependencies": {
-    "@claude-chat/protocol": "workspace:*"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250109.0",
-    "@cloudflare/vitest-pool-workers": "^0.8.0",
-    "typescript": "^5.4.0",
-    "vitest": "^2.1.0",
-    "wrangler": "^3.99.0"
-  }
+    "name": "@claude-chat/worker",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Cloudflare Worker for Claude Chat",
+    "type": "module",
+    "scripts": {
+        "dev": "wrangler dev",
+        "build": "wrangler deploy --dry-run --outdir=dist",
+        "deploy": "wrangler deploy",
+        "deploy:staging": "wrangler deploy --env staging",
+        "deploy:production": "wrangler deploy --env production",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "test:integration": "vitest run --config vitest.integration.config.ts",
+        "test:integration:local": "SERVER_URL=http://localhost:8787 vitest run --config vitest.integration.config.ts",
+        "test:integration:staging": "SERVER_URL=https://claude-chat-staging.bocephus.workers.dev vitest run --config vitest.integration.config.ts",
+        "test:integration:production": "SERVER_URL=https://claude-chat.bocephus.workers.dev vitest run --config vitest.integration.config.ts",
+        "typecheck": "tsc --noEmit",
+        "tail": "wrangler tail",
+        "tail:staging": "wrangler tail --env staging",
+        "clean": "rm -rf dist .wrangler",
+        "generate-token": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    },
+    "dependencies": {
+        "@claude-chat/protocol": "workspace:*"
+    },
+    "devDependencies": {
+        "@cloudflare/vitest-pool-workers": "^0.8.0",
+        "@cloudflare/workers-types": "^4.20250109.0",
+        "typescript": "^5.4.0",
+        "vitest": "^2.1.0",
+        "wrangler": "^4.35.0"
+    }
 }
