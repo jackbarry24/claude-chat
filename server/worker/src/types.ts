@@ -1,6 +1,8 @@
 export interface Env {
   SESSION: DurableObjectNamespace;
+  RATE_LIMIT: DurableObjectNamespace;
   ENVIRONMENT?: string;
+  STAGING_AUTH_TOKEN?: string;  // Secret: only set in staging
 }
 
 export interface StoredSession {

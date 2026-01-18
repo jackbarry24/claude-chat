@@ -5,8 +5,11 @@ import {
 } from '@claude-chat/protocol';
 
 import type { Env } from './types.js';
+import type { RateLimitResult } from './rate-limiter.js';
+import { checkRateLimit } from './rate-limit-do.js';
 
 export { SessionDO } from './session-do.js';
+export { RateLimitDO } from './rate-limit-do.js';
 
 /**
  * Maximum request body size in bytes (100KB).
@@ -17,42 +20,120 @@ const MAX_BODY_SIZE = 100 * 1024;
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Session-Password, X-Admin-Password',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Session-Password, X-Admin-Password, Authorization',
 };
 
-function jsonResponse(data: unknown, status = 200): Response {
-    return new Response(JSON.stringify(data), {
-        status,
-        headers: {
-            'Content-Type': 'application/json',
-            ...CORS_HEADERS,
-        },
-    });
+/**
+ * Generate a unique request ID for tracing.
+ */
+function generateRequestId(): string {
+    return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function errorResponse(code: string, message: string, status = 400): Response {
-    return jsonResponse({ error: code, message }, status);
+/**
+ * Structured logging helper.
+ */
+function log(
+    level: 'info' | 'warn' | 'error',
+    message: string,
+    context: Record<string, unknown> = {}
+): void {
+    const entry = {
+        level,
+        message,
+        timestamp: new Date().toISOString(),
+        ...context,
+    };
+    if (level === 'error') {
+        console.error(JSON.stringify(entry));
+    } else if (level === 'warn') {
+        console.warn(JSON.stringify(entry));
+    } else {
+        console.log(JSON.stringify(entry));
+    }
+}
+
+interface ResponseOptions {
+    status?: number;
+    requestId?: string;
+    rateLimit?: RateLimitResult;
+}
+
+function jsonResponse(data: unknown, options: ResponseOptions = {}): Response {
+    const { status = 200, requestId, rateLimit } = options;
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...CORS_HEADERS,
+    };
+
+    if (requestId) {
+        headers['X-Request-ID'] = requestId;
+    }
+
+    if (rateLimit) {
+        headers['X-RateLimit-Remaining'] = String(rateLimit.remaining);
+        headers['X-RateLimit-Reset'] = String(Math.ceil(rateLimit.resetAt / 1000));
+    }
+
+    return new Response(JSON.stringify(data), { status, headers });
+}
+
+function errorResponse(
+    code: string,
+    message: string,
+    status = 400,
+    options: ResponseOptions = {}
+): Response {
+    return jsonResponse({ error: code, message }, { ...options, status });
 }
 
 /**
  * Check if request body exceeds maximum size.
  * Returns null if OK, or an error response if too large.
  */
-async function checkBodySize(request: Request): Promise<Response | null> {
+function checkBodySize(request: Request, requestId: string): Response | null {
     const contentLength = request.headers.get('Content-Length');
     if (contentLength && parseInt(contentLength, 10) > MAX_BODY_SIZE) {
         return errorResponse(
             ErrorCode.VALIDATION_ERROR,
             `Request body too large. Maximum size is ${MAX_BODY_SIZE} bytes.`,
-            413
+            413,
+            { requestId }
         );
     }
     return null;
 }
 
+/**
+ * Check staging auth token if in staging environment.
+ * Returns null if OK, or 401 response if unauthorized.
+ */
+function checkStagingAuth(request: Request, env: Env, requestId: string): Response | null {
+    if (env.ENVIRONMENT !== 'staging' || !env.STAGING_AUTH_TOKEN) {
+        return null;
+    }
+
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        log('warn', 'Missing auth header on staging', { requestId });
+        return errorResponse('UNAUTHORIZED', 'Missing or invalid Authorization header', 401, { requestId });
+    }
+
+    const token = authHeader.slice(7); // Remove 'Bearer ' prefix
+    if (token !== env.STAGING_AUTH_TOKEN) {
+        log('warn', 'Invalid auth token on staging', { requestId });
+        return errorResponse('UNAUTHORIZED', 'Invalid token', 401, { requestId });
+    }
+
+    return null;
+}
+
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
+        const requestId = generateRequestId();
+        const startTime = Date.now();
         const url = new URL(request.url);
+        const clientIp = request.headers.get('CF-Connecting-IP') ?? 'unknown';
 
         if (request.method === 'OPTIONS') {
             return new Response(null, { headers: CORS_HEADERS });
@@ -61,40 +142,68 @@ export default {
         try {
             // Check body size for POST requests
             if (request.method === 'POST') {
-                const sizeError = await checkBodySize(request);
+                const sizeError = checkBodySize(request, requestId);
                 if (sizeError) return sizeError;
             }
 
             if (url.pathname === '/health') {
-                return jsonResponse({ status: 'ok', timestamp: Date.now() });
+                return jsonResponse({ status: 'ok', timestamp: Date.now() }, { requestId });
             }
+
+            // Check staging auth for all routes except /health
+            const authError = checkStagingAuth(request, env, requestId);
+            if (authError) return authError;
 
             if (url.pathname.startsWith('/api/')) {
-                return handleAPI(request, env, url);
+                const response = await handleAPI(request, env, url, requestId, clientIp);
+                const duration = Date.now() - startTime;
+                log('info', 'Request completed', {
+                    requestId,
+                    method: request.method,
+                    path: url.pathname,
+                    status: response.status,
+                    duration,
+                    clientIp,
+                });
+                return response;
             }
 
-            return errorResponse('NOT_FOUND', 'Not found', 404);
+            return errorResponse('NOT_FOUND', 'Not found', 404, { requestId });
         } catch (error) {
-            console.error('Unhandled error:', error);
+            const duration = Date.now() - startTime;
+            log('error', 'Unhandled error', {
+                requestId,
+                method: request.method,
+                path: url.pathname,
+                error: error instanceof Error ? error.message : String(error),
+                duration,
+                clientIp,
+            });
             if (error instanceof ChatError) {
-                return jsonResponse(error.toResponse(), error.httpStatus);
+                return jsonResponse(error.toResponse(), { status: error.httpStatus, requestId });
             }
-            return errorResponse(ErrorCode.INTERNAL_ERROR, 'Internal server error', 500);
+            return errorResponse(ErrorCode.INTERNAL_ERROR, 'Internal server error', 500, { requestId });
         }
     },
 };
 
-async function handleAPI(request: Request, env: Env, url: URL): Promise<Response> {
+async function handleAPI(
+    request: Request,
+    env: Env,
+    url: URL,
+    requestId: string,
+    clientIp: string
+): Promise<Response> {
     const path = url.pathname.replace('/api', '');
     const method = request.method;
 
     if (path === '/sessions' && method === 'POST') {
-        return handleCreateSession(request, env);
+        return handleCreateSession(request, env, requestId, clientIp);
     }
 
     const sessionMatch = path.match(/^\/sessions\/([^/]+)(\/.*)?$/);
     if (!sessionMatch || !sessionMatch[1]) {
-        return errorResponse('NOT_FOUND', 'Not found', 404);
+        return errorResponse('NOT_FOUND', 'Not found', 404, { requestId });
     }
 
     const sessionId = sessionMatch[1];
@@ -125,12 +234,30 @@ async function handleAPI(request: Request, env: Env, url: URL): Promise<Response
         status: response.status,
         headers: {
             'Content-Type': 'application/json',
+            'X-Request-ID': requestId,
             ...CORS_HEADERS,
         },
     });
 }
 
-async function handleCreateSession(request: Request, env: Env): Promise<Response> {
+async function handleCreateSession(
+    request: Request,
+    env: Env,
+    requestId: string,
+    clientIp: string
+): Promise<Response> {
+    // Rate limit session creation by IP
+    const rateLimitResult = await checkRateLimit(env.RATE_LIMIT, `create:${clientIp}`);
+    if (!rateLimitResult.allowed) {
+        log('warn', 'Rate limit exceeded for session creation', { requestId, clientIp });
+        return errorResponse(
+            ErrorCode.RATE_LIMITED,
+            'Too many session creation requests. Please try again later.',
+            429,
+            { requestId, rateLimit: rateLimitResult }
+        );
+    }
+
     const sessionId = generateSessionId();
     const doId = env.SESSION.idFromName(sessionId);
     const stub = env.SESSION.get(doId);
@@ -152,6 +279,9 @@ async function handleCreateSession(request: Request, env: Env): Promise<Response
         status: response.status,
         headers: {
             'Content-Type': 'application/json',
+            'X-Request-ID': requestId,
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+            'X-RateLimit-Reset': String(Math.ceil(rateLimitResult.resetAt / 1000)),
             ...CORS_HEADERS,
         },
     });

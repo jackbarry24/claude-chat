@@ -218,6 +218,9 @@ export class SessionDO implements DurableObject {
 
     await this.save();
 
+    // Schedule cleanup alarm for when session expires (plus 1 minute buffer)
+    await this.scheduleCleanup(SESSION_TTL_MS + 60_000);
+
     const response: CreateSessionResponse = {
       session_id: sessionId,
       session_password: sessionPassword,
@@ -548,11 +551,58 @@ export class SessionDO implements DurableObject {
     this.session!.ended = true;
     await this.save();
 
+    // Schedule cleanup alarm for 1 minute from now
+    await this.scheduleCleanup(60_000);
+
     const response: EndSessionResponse = {
       success: true,
       message: 'Session ended',
     };
 
     return this.jsonResponse(response);
+  }
+
+  /**
+   * Schedule a cleanup alarm.
+   * @param delayMs - Milliseconds from now to run cleanup
+   */
+  private async scheduleCleanup(delayMs: number): Promise<void> {
+    const alarmTime = Date.now() + delayMs;
+    await this.state.storage.setAlarm(alarmTime);
+  }
+
+  /**
+   * Alarm handler - cleans up expired or ended sessions.
+   * Called automatically by the Durable Object runtime.
+   */
+  async alarm(): Promise<void> {
+    await this.initialize();
+
+    if (!this.session) {
+      // No session data, delete all storage
+      await this.state.storage.deleteAll();
+      return;
+    }
+
+    const now = Date.now();
+    const isExpired = now > this.session.expiresAt;
+    const isEnded = this.session.ended;
+
+    if (isExpired || isEnded) {
+      // Clean up: delete all storage for this DO
+      console.log(JSON.stringify({
+        level: 'info',
+        message: 'Session cleanup',
+        sessionId: this.session.id,
+        reason: isEnded ? 'ended' : 'expired',
+        timestamp: new Date().toISOString(),
+      }));
+      await this.state.storage.deleteAll();
+    } else {
+      // Session still active, reschedule alarm for expiration time
+      // Add a small buffer (1 minute) after expiration
+      const nextAlarm = this.session.expiresAt + 60_000;
+      await this.state.storage.setAlarm(nextAlarm);
+    }
   }
 }

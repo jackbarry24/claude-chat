@@ -5,13 +5,18 @@ compatibility_date = "2024-01-01"
 # Durable Objects configuration (used by local dev)
 [durable_objects]
 bindings = [
-  { name = "SESSION", class_name = "SessionDO" }
+  { name = "SESSION", class_name = "SessionDO" },
+  { name = "RATE_LIMIT", class_name = "RateLimitDO" }
 ]
 
 # Required: migrations for Durable Objects (sqlite for free tier)
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["SessionDO"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["RateLimitDO"]
 
 # Environment variables
 [vars]
@@ -30,7 +35,10 @@ name = "claude-chat"
 ENVIRONMENT = "production"
 LOG_LEVEL = "info"
 [env.production.durable_objects]
-bindings = [{ name = "SESSION", class_name = "SessionDO" }]
+bindings = [
+  { name = "SESSION", class_name = "SessionDO" },
+  { name = "RATE_LIMIT", class_name = "RateLimitDO" }
+]
 
 # Staging environment
 [env.staging]
@@ -39,4 +47,7 @@ name = "claude-chat-staging"
 ENVIRONMENT = "staging"
 LOG_LEVEL = "debug"
 [env.staging.durable_objects]
-bindings = [{ name = "SESSION", class_name = "SessionDO" }]
+bindings = [
+  { name = "SESSION", class_name = "SessionDO" },
+  { name = "RATE_LIMIT", class_name = "RateLimitDO" }
+]
