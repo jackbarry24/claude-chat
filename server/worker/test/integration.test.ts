@@ -2,12 +2,24 @@
  * Integration tests for Claude Chat API.
  *
  * Run against any environment:
- *   SERVER_URL=http://localhost:8787 pnpm test:integration
- *   SERVER_URL=https://claude-chat-staging.workers.dev pnpm test:integration
+ *   pnpm test:integration:local                                    # localhost
+ *   STAGING_AUTH_TOKEN=xxx pnpm test:integration:staging           # staging (requires token)
+ *   SERVER_URL=https://custom.workers.dev pnpm test:integration    # custom URL
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 
 const SERVER_URL = process.env.SERVER_URL || 'http://localhost:8787';
+const STAGING_AUTH_TOKEN = process.env.STAGING_AUTH_TOKEN;
+
+/**
+ * Helper to add auth header when STAGING_AUTH_TOKEN is set.
+ */
+function authHeaders(): HeadersInit {
+  if (STAGING_AUTH_TOKEN) {
+    return { Authorization: `Bearer ${STAGING_AUTH_TOKEN}` };
+  }
+  return {};
+}
 
 interface SessionCredentials {
   session_id: string;
@@ -37,7 +49,7 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
     it('should create a session', async () => {
       const response = await fetch(`${SERVER_URL}/api/sessions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ display_name: 'Integration Test' }),
       });
 
@@ -60,7 +72,7 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
 
     it('should get session info', async () => {
       const response = await fetch(`${SERVER_URL}/api/sessions/${testSession.session_id}`, {
-        headers: { 'X-Session-Password': testSession.session_password },
+        headers: { 'X-Session-Password': testSession.session_password, ...authHeaders() },
       });
 
       expect(response.status).toBe(200);
@@ -87,6 +99,7 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
           headers: {
             'Content-Type': 'application/json',
             'X-Session-Password': testSession.session_password,
+            ...authHeaders(),
           },
           body: JSON.stringify({
             participant_id: testSession.participant_id,
@@ -108,7 +121,7 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
       const readResponse = await fetch(
         `${SERVER_URL}/api/sessions/${testSession.session_id}/messages?participant_id=${testSession.participant_id}`,
         {
-          headers: { 'X-Session-Password': testSession.session_password },
+          headers: { 'X-Session-Password': testSession.session_password, ...authHeaders() },
         }
       );
 
@@ -130,6 +143,7 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
           headers: {
             'Content-Type': 'application/json',
             'X-Session-Password': testSession.session_password,
+            ...authHeaders(),
           },
           body: JSON.stringify({ display_name: 'Second Participant' }),
         }
@@ -149,7 +163,7 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
         `${SERVER_URL}/api/sessions/${testSession.session_id}/participants/${joinData.participant_id}?requester_id=${joinData.participant_id}`,
         {
           method: 'DELETE',
-          headers: { 'X-Session-Password': testSession.session_password },
+          headers: { 'X-Session-Password': testSession.session_password, ...authHeaders() },
         }
       );
 
@@ -159,7 +173,7 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
     it('should end session with admin password', async () => {
       const response = await fetch(`${SERVER_URL}/api/sessions/${testSession.session_id}`, {
         method: 'DELETE',
-        headers: { 'X-Admin-Password': testSession.admin_password },
+        headers: { 'X-Admin-Password': testSession.admin_password, ...authHeaders() },
       });
 
       expect(response.status).toBe(200);
@@ -168,10 +182,132 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
       const checkResponse = await fetch(
         `${SERVER_URL}/api/sessions/${testSession.session_id}`,
         {
-          headers: { 'X-Session-Password': testSession.session_password },
+          headers: { 'X-Session-Password': testSession.session_password, ...authHeaders() },
         }
       );
       expect(checkResponse.status).toBe(404);
+    });
+  });
+
+  describe('Session Limits', () => {
+    it('should reject when session is full (max 3 participants)', async () => {
+      // Create session (participant 1)
+      const createResponse = await fetch(`${SERVER_URL}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ display_name: 'Admin' }),
+      });
+      const session = (await createResponse.json()) as SessionCredentials;
+
+      // Join as participant 2
+      await fetch(`${SERVER_URL}/api/sessions/${session.session_id}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Password': session.session_password,
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ display_name: 'Participant 2' }),
+      });
+
+      // Join as participant 3
+      await fetch(`${SERVER_URL}/api/sessions/${session.session_id}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Password': session.session_password,
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ display_name: 'Participant 3' }),
+      });
+
+      // Try to join as participant 4 (should fail)
+      const fullResponse = await fetch(`${SERVER_URL}/api/sessions/${session.session_id}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Password': session.session_password,
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ display_name: 'Participant 4' }),
+      });
+
+      expect(fullResponse.status).toBe(403);
+      const data = (await fullResponse.json()) as { error: string };
+      expect(data.error).toBe('SESSION_FULL');
+
+      // Cleanup
+      await fetch(`${SERVER_URL}/api/sessions/${session.session_id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': session.admin_password, ...authHeaders() },
+      });
+    });
+
+    it('should reject oversized request body', async () => {
+      // Create a body larger than 100KB
+      const largeContent = 'x'.repeat(150 * 1024);
+
+      const response = await fetch(`${SERVER_URL}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ display_name: largeContent }),
+      });
+
+      expect(response.status).toBe(413);
+    });
+  });
+
+  describe('Admin Operations', () => {
+    it('should allow admin to kick another participant', async () => {
+      // Create session
+      const createResponse = await fetch(`${SERVER_URL}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ display_name: 'Admin' }),
+      });
+      const session = (await createResponse.json()) as SessionCredentials;
+
+      // Join as second participant
+      const joinResponse = await fetch(`${SERVER_URL}/api/sessions/${session.session_id}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Password': session.session_password,
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ display_name: 'To Be Kicked' }),
+      });
+      const joinData = (await joinResponse.json()) as { participant_id: string };
+
+      // Admin kicks the second participant
+      const kickResponse = await fetch(
+        `${SERVER_URL}/api/sessions/${session.session_id}/participants/${joinData.participant_id}?requester_id=${session.participant_id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'X-Session-Password': session.session_password,
+            'X-Admin-Password': session.admin_password,
+            ...authHeaders(),
+          },
+        }
+      );
+
+      expect(kickResponse.status).toBe(200);
+      const kickData = (await kickResponse.json()) as { success: boolean };
+      expect(kickData.success).toBe(true);
+
+      // Verify participant count is now 1
+      const infoResponse = await fetch(`${SERVER_URL}/api/sessions/${session.session_id}`, {
+        headers: { 'X-Session-Password': session.session_password, ...authHeaders() },
+      });
+      const infoData = (await infoResponse.json()) as { participant_count: number };
+      expect(infoData.participant_count).toBe(1);
+
+      // Cleanup
+      await fetch(`${SERVER_URL}/api/sessions/${session.session_id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': session.admin_password, ...authHeaders() },
+      });
     });
   });
 
@@ -180,13 +316,13 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
       // Create a fresh session for this test
       const createResponse = await fetch(`${SERVER_URL}/api/sessions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ display_name: 'Error Test' }),
       });
       const session = (await createResponse.json()) as SessionCredentials;
 
       const response = await fetch(`${SERVER_URL}/api/sessions/${session.session_id}`, {
-        headers: { 'X-Session-Password': 'wrong-password' },
+        headers: { 'X-Session-Password': 'wrong-password', ...authHeaders() },
       });
 
       expect(response.status).toBe(401);
@@ -194,13 +330,13 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
       // Cleanup
       await fetch(`${SERVER_URL}/api/sessions/${session.session_id}`, {
         method: 'DELETE',
-        headers: { 'X-Admin-Password': session.admin_password },
+        headers: { 'X-Admin-Password': session.admin_password, ...authHeaders() },
       });
     });
 
     it('should return 404 for non-existent session', async () => {
       const response = await fetch(`${SERVER_URL}/api/sessions/nonexistent`, {
-        headers: { 'X-Session-Password': 'any' },
+        headers: { 'X-Session-Password': 'any', ...authHeaders() },
       });
 
       expect(response.status).toBe(404);
@@ -209,11 +345,35 @@ describe(`Integration Tests (${SERVER_URL})`, () => {
     it('should validate request body', async () => {
       const response = await fetch(`${SERVER_URL}/api/sessions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({}),
       });
 
       expect(response.status).toBe(400);
+    });
+  });
+
+  // Staging auth tests - only run when testing against staging with a token
+  describe('Staging Authentication', () => {
+    const isStaging = SERVER_URL.includes('staging') && STAGING_AUTH_TOKEN;
+
+    it.skipIf(!isStaging)('should reject requests without auth token', async () => {
+      // Make request WITHOUT auth header
+      const response = await fetch(`${SERVER_URL}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, // No auth header
+        body: JSON.stringify({ display_name: 'No Auth Test' }),
+      });
+
+      expect(response.status).toBe(401);
+      const data = (await response.json()) as { error: string };
+      expect(data.error).toBe('UNAUTHORIZED');
+    });
+
+    it.skipIf(!isStaging)('should allow health endpoint without auth', async () => {
+      // Health should work without auth even on staging
+      const response = await fetch(`${SERVER_URL}/health`);
+      expect(response.status).toBe(200);
     });
   });
 });
