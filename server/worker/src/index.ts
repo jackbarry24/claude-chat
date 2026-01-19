@@ -20,7 +20,7 @@ const MAX_BODY_SIZE = 100 * 1024;
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Session-Password, X-Admin-Password, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Session-Password, X-Admin-Password, X-Auth-Token, Authorization',
 };
 
 /**

@@ -33,6 +33,7 @@ describe('Session API', () => {
   async function sendMessage(
     sessionId: string,
     sessionPassword: string,
+    authToken: string,
     participantId: string,
     content: string
   ) {
@@ -41,6 +42,7 @@ describe('Session API', () => {
       headers: {
         'Content-Type': 'application/json',
         'X-Session-Password': sessionPassword,
+        'X-Auth-Token': authToken,
       },
       body: JSON.stringify({
         participant_id: participantId,
@@ -55,13 +57,14 @@ describe('Session API', () => {
   async function readMessages(
     sessionId: string,
     sessionPassword: string,
+    authToken: string,
     participantId: string
   ) {
     const request = new Request(
       `http://localhost/api/sessions/${sessionId}/messages?participant_id=${participantId}`,
       {
         method: 'GET',
-        headers: { 'X-Session-Password': sessionPassword },
+        headers: { 'X-Session-Password': sessionPassword, 'X-Auth-Token': authToken },
       }
     );
     const response = await worker.fetch(request, env, ctx);
@@ -79,6 +82,7 @@ describe('Session API', () => {
         session_password: string;
         admin_password: string;
         participant_id: string;
+        auth_token: string;
         created_at: number;
         expires_at: number;
       };
@@ -87,6 +91,7 @@ describe('Session API', () => {
       expect(data.session_password).toBeTruthy();
       expect(data.admin_password).toBeTruthy();
       expect(data.participant_id).toMatch(/^p_/);
+      expect(data.auth_token).toBeTruthy();
       expect(data.created_at).toBeGreaterThan(0);
       expect(data.expires_at).toBeGreaterThan(data.created_at);
     });
@@ -120,11 +125,13 @@ describe('Session API', () => {
       const data = await joinResponse.json() as {
         success: boolean;
         participant_id: string;
+        auth_token: string;
         participants: Array<{ id: string; display_name: string }>;
       };
 
       expect(data.success).toBe(true);
       expect(data.participant_id).toMatch(/^p_/);
+      expect(data.auth_token).toBeTruthy();
       expect(data.participants).toHaveLength(2);
     });
 
@@ -162,15 +169,17 @@ describe('Session API', () => {
   describe('POST /api/sessions/:id/messages', () => {
     it('should send a message', async () => {
       const createResponse = await createSession('Alice');
-      const { session_id, session_password, participant_id } = await createResponse.json() as {
+      const { session_id, session_password, participant_id, auth_token } = await createResponse.json() as {
         session_id: string;
         session_password: string;
         participant_id: string;
+        auth_token: string;
       };
 
       const sendResponse = await sendMessage(
         session_id,
         session_password,
+        auth_token,
         participant_id,
         'Hello, world!'
       );
@@ -189,14 +198,16 @@ describe('Session API', () => {
 
     it('should reject message from non-participant', async () => {
       const createResponse = await createSession('Alice');
-      const { session_id, session_password } = await createResponse.json() as {
+      const { session_id, session_password, auth_token } = await createResponse.json() as {
         session_id: string;
         session_password: string;
+        auth_token: string;
       };
 
       const sendResponse = await sendMessage(
         session_id,
         session_password,
+        auth_token,
         'p_nonexistent',
         'Hello!'
       );
@@ -207,16 +218,17 @@ describe('Session API', () => {
   describe('GET /api/sessions/:id/messages', () => {
     it('should read messages', async () => {
       const createResponse = await createSession('Alice');
-      const { session_id, session_password, participant_id } = await createResponse.json() as {
+      const { session_id, session_password, participant_id, auth_token } = await createResponse.json() as {
         session_id: string;
         session_password: string;
         participant_id: string;
+        auth_token: string;
       };
 
-      await sendMessage(session_id, session_password, participant_id, 'Message 1');
-      await sendMessage(session_id, session_password, participant_id, 'Message 2');
+      await sendMessage(session_id, session_password, auth_token, participant_id, 'Message 1');
+      await sendMessage(session_id, session_password, auth_token, participant_id, 'Message 2');
 
-      const readResponse = await readMessages(session_id, session_password, participant_id);
+      const readResponse = await readMessages(session_id, session_password, auth_token, participant_id);
       expect(readResponse.status).toBe(200);
 
       const data = await readResponse.json() as {
@@ -232,25 +244,26 @@ describe('Session API', () => {
 
     it('should track read cursor', async () => {
       const createResponse = await createSession('Alice');
-      const { session_id, session_password, participant_id } = await createResponse.json() as {
+      const { session_id, session_password, participant_id, auth_token } = await createResponse.json() as {
         session_id: string;
         session_password: string;
         participant_id: string;
+        auth_token: string;
       };
 
-      await sendMessage(session_id, session_password, participant_id, 'Message 1');
+      await sendMessage(session_id, session_password, auth_token, participant_id, 'Message 1');
 
-      const read1 = await readMessages(session_id, session_password, participant_id);
+      const read1 = await readMessages(session_id, session_password, auth_token, participant_id);
       const data1 = await read1.json() as { messages: Array<{ id: string }> };
       expect(data1.messages).toHaveLength(1);
 
-      const read2 = await readMessages(session_id, session_password, participant_id);
+      const read2 = await readMessages(session_id, session_password, auth_token, participant_id);
       const data2 = await read2.json() as { messages: Array<{ id: string }> };
       expect(data2.messages).toHaveLength(0);
 
-      await sendMessage(session_id, session_password, participant_id, 'Message 2');
+      await sendMessage(session_id, session_password, auth_token, participant_id, 'Message 2');
 
-      const read3 = await readMessages(session_id, session_password, participant_id);
+      const read3 = await readMessages(session_id, session_password, auth_token, participant_id);
       const data3 = await read3.json() as { messages: Array<{ id: string; content: string }> };
       expect(data3.messages).toHaveLength(1);
       expect(data3.messages[0].content).toBe('Message 2');
@@ -301,13 +314,16 @@ describe('Session API', () => {
       };
 
       const joinResponse = await joinSession(session_id, session_password, 'Bob');
-      const { participant_id: bobId } = await joinResponse.json() as { participant_id: string };
+      const { participant_id: bobId, auth_token: bobAuthToken } = await joinResponse.json() as {
+        participant_id: string;
+        auth_token: string;
+      };
 
       const leaveRequest = new Request(
-        `http://localhost/api/sessions/${session_id}/participants/${bobId}?requester_id=${bobId}`,
+        `http://localhost/api/sessions/${session_id}/participants/${bobId}`,
         {
           method: 'DELETE',
-          headers: { 'X-Session-Password': session_password },
+          headers: { 'X-Session-Password': session_password, 'X-Auth-Token': bobAuthToken },
         }
       );
       const leaveResponse = await worker.fetch(leaveRequest, env, ctx);
@@ -320,22 +336,24 @@ describe('Session API', () => {
 
     it('should allow admin to remove other participant', async () => {
       const createResponse = await createSession('Alice');
-      const { session_id, session_password, admin_password, participant_id: aliceId } = await createResponse.json() as {
+      const { session_id, session_password, admin_password, participant_id: aliceId, auth_token: aliceAuthToken } = await createResponse.json() as {
         session_id: string;
         session_password: string;
         admin_password: string;
         participant_id: string;
+        auth_token: string;
       };
 
       const joinResponse = await joinSession(session_id, session_password, 'Bob');
       const { participant_id: bobId } = await joinResponse.json() as { participant_id: string };
 
       const removeRequest = new Request(
-        `http://localhost/api/sessions/${session_id}/participants/${bobId}?requester_id=${aliceId}`,
+        `http://localhost/api/sessions/${session_id}/participants/${bobId}`,
         {
           method: 'DELETE',
           headers: {
             'X-Session-Password': session_password,
+            'X-Auth-Token': aliceAuthToken,
             'X-Admin-Password': admin_password,
           },
         }
@@ -348,21 +366,25 @@ describe('Session API', () => {
 
     it('should reject non-admin removing other participant without admin password', async () => {
       const createResponse = await createSession('Alice');
-      const { session_id, session_password, participant_id: aliceId } = await createResponse.json() as {
+      const { session_id, session_password, participant_id: aliceId, auth_token: aliceAuthToken } = await createResponse.json() as {
         session_id: string;
         session_password: string;
         participant_id: string;
+        auth_token: string;
       };
 
       const joinResponse = await joinSession(session_id, session_password, 'Bob');
-      const { participant_id: bobId } = await joinResponse.json() as { participant_id: string };
+      const { participant_id: bobId, auth_token: bobAuthToken } = await joinResponse.json() as {
+        participant_id: string;
+        auth_token: string;
+      };
 
       // Bob tries to remove Alice without admin password
       const removeRequest = new Request(
-        `http://localhost/api/sessions/${session_id}/participants/${aliceId}?requester_id=${bobId}`,
+        `http://localhost/api/sessions/${session_id}/participants/${aliceId}`,
         {
           method: 'DELETE',
-          headers: { 'X-Session-Password': session_password },
+          headers: { 'X-Session-Password': session_password, 'X-Auth-Token': bobAuthToken },
         }
       );
       const removeResponse = await worker.fetch(removeRequest, env, ctx);
@@ -375,19 +397,21 @@ describe('Session API', () => {
 
     it('should return 404 for non-existent participant', async () => {
       const createResponse = await createSession('Alice');
-      const { session_id, session_password, admin_password, participant_id: aliceId } = await createResponse.json() as {
+      const { session_id, session_password, admin_password, participant_id: aliceId, auth_token: aliceAuthToken } = await createResponse.json() as {
         session_id: string;
         session_password: string;
         admin_password: string;
         participant_id: string;
+        auth_token: string;
       };
 
       const removeRequest = new Request(
-        `http://localhost/api/sessions/${session_id}/participants/p_nonexistent?requester_id=${aliceId}`,
+        `http://localhost/api/sessions/${session_id}/participants/p_nonexistent`,
         {
           method: 'DELETE',
           headers: {
             'X-Session-Password': session_password,
+            'X-Auth-Token': aliceAuthToken,
             'X-Admin-Password': admin_password,
           },
         }
@@ -402,14 +426,15 @@ describe('Session API', () => {
   describe('GET /api/sessions/:id', () => {
     it('should return session info', async () => {
       const createResponse = await createSession('Alice');
-      const { session_id, session_password, participant_id } = await createResponse.json() as {
+      const { session_id, session_password, participant_id, auth_token } = await createResponse.json() as {
         session_id: string;
         session_password: string;
         participant_id: string;
+        auth_token: string;
       };
 
       // Send a message to have message_count > 0
-      await sendMessage(session_id, session_password, participant_id, 'Hello');
+      await sendMessage(session_id, session_password, auth_token, participant_id, 'Hello');
 
       const infoRequest = new Request(`http://localhost/api/sessions/${session_id}`, {
         method: 'GET',

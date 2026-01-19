@@ -32,13 +32,14 @@ Which session do you want to leave? (1 or 2)
 ## API
 
 ```http
-DELETE {server_url}/api/sessions/{session_id}/participants/{participant_id}?requester_id={participant_id}
+DELETE {server_url}/api/sessions/{session_id}/participants/{participant_id}
 X-Session-Password: {session_password}
+X-Auth-Token: {auth_token}
 ```
 
 Where `server_url` and credentials come from the saved session file.
 
-Note: `requester_id` equals `participant_id` when leaving yourself. Admins can remove others by using their `participant_id` with their own `requester_id`.
+Note: admins can remove other participants by using their admin password plus their own auth token.
 
 Response:
 ```json
@@ -69,4 +70,3 @@ If it was the only session:
 No active chat sessions remaining.
 Use $chat-start or $chat-join to connect again.
 ```
-

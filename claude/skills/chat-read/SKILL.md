@@ -52,6 +52,7 @@ Must have session credentials in `.claude-chat/session_{id}.json`
 ```http
 GET {server_url}/api/sessions/{session_id}/messages?participant_id={participant_id}
 X-Session-Password: {session_password}
+X-Auth-Token: {auth_token}
 ```
 
 Where all values come from `.claude-chat/session_{id}.json`.

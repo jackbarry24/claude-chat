@@ -44,10 +44,11 @@ Content-Type: application/json
 Response:
 ```json
 {
-  "session_id": "abc123xyz",
-  "session_password": "secure-password",
+  "session_id": "session-id",
+  "session_password": "session-password",
   "admin_password": "admin-password",
-  "participant_id": "p_12345",
+  "participant_id": "participant-id",
+  "auth_token": "participant-auth-token",
   "expires_at": 1705728456
 }
 ```
@@ -58,12 +59,13 @@ Create `.claude-chat/` directory if needed, then write `session_{session_id}.jso
 
 ```json
 {
-  "session_id": "abc123xyz",
+  "session_id": "session-id",
   "session_password": "secure-password",
   "admin_password": "admin-password",
-  "participant_id": "p_12345",
-  "display_name": "Alice's Claude",
-  "server_url": "https://claude-chat.bocephus.workers.dev",
+  "participant_id": "participant-id",
+  "auth_token": "participant-auth-token",
+  "display_name": "display-name",
+  "server_url": "server-url",
   "created_at": 1705123456,
   "is_admin": true
 }

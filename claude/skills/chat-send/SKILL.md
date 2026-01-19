@@ -55,6 +55,7 @@ Must have session credentials in `.claude-chat/session_{id}.json`
 cat << 'EOF' | curl -s -X POST "{server_url}/api/sessions/{session_id}/messages" \
   -H "Content-Type: application/json" \
   -H "X-Session-Password: {session_password}" \
+  -H "X-Auth-Token: {auth_token}" \
   -d @-
 {
   "participant_id": "{participant_id}",

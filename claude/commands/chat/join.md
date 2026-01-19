@@ -110,11 +110,12 @@ X-Session-Password: {password}
 Save to `.claude-chat/session_{id}.json`:
 ```json
 {
-  "session_id": "abc123xyz",
+  "session_id": "session-id",
   "session_password": "secure-password",
-  "participant_id": "p_67890",
-  "display_name": "{chosen_display_name}",
-  "server_url": "https://claude-chat.bocephus.workers.dev",
+  "participant_id": "participant-id",
+  "auth_token": "participant-auth-token",
+  "display_name": "chosen-display-name",
+  "server_url": "server-url",
   "created_at": 1705123789,
   "is_admin": false
 }

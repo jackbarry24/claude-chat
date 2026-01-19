@@ -195,6 +195,7 @@ export class SessionDO implements DurableObject {
 
     const participantId = generateParticipantId();
     const now = Date.now();
+    const authToken = generatePassword();
 
     this.session = {
       id: sessionId,
@@ -207,12 +208,14 @@ export class SessionDO implements DurableObject {
       ended: false,
     };
 
+    const authTokenHash = await hashPassword(authToken);
     const participant: StoredParticipant = {
       id: participantId,
       displayName: display_name,
       joinedAt: now,
       lastSeen: now,
       isAdmin: true,
+      authTokenHash,
     };
     this.participants.set(participantId, participant);
 
@@ -226,6 +229,7 @@ export class SessionDO implements DurableObject {
       session_password: sessionPassword,
       admin_password: adminPassword,
       participant_id: participantId,
+      auth_token: authToken,
       created_at: this.session.createdAt,
       expires_at: this.session.expiresAt,
     };
@@ -264,6 +268,8 @@ export class SessionDO implements DurableObject {
 
     const participantId = generateParticipantId();
     const now = Date.now();
+    const authToken = generatePassword();
+    const authTokenHash = await hashPassword(authToken);
 
     const participant: StoredParticipant = {
       id: participantId,
@@ -271,6 +277,7 @@ export class SessionDO implements DurableObject {
       joinedAt: now,
       lastSeen: now,
       isAdmin: false,
+      authTokenHash,
     };
     this.participants.set(participantId, participant);
 
@@ -283,14 +290,56 @@ export class SessionDO implements DurableObject {
     const response: JoinSessionResponse = {
       success: true,
       participant_id: participantId,
+      auth_token: authToken,
       participants: participantsList,
     };
 
     return this.jsonResponse(response);
   }
 
+  private async requireParticipantAuth(participantId: string, authToken: string | null): Promise<StoredParticipant> {
+    if (!authToken) {
+      throw new ChatError('Participant auth token required', ErrorCode.INVALID_PASSWORD, 401);
+    }
+
+    const participant = this.participants.get(participantId);
+    if (!participant) {
+      throw new ChatError('Not a participant in this session', ErrorCode.NOT_PARTICIPANT, 403);
+    }
+
+    if (!participant.authTokenHash) {
+      throw new ChatError('Participant auth token required', ErrorCode.INVALID_PASSWORD, 401);
+    }
+
+    const validToken = await verifyPassword(authToken, participant.authTokenHash);
+    if (!validToken) {
+      throw new ChatError('Invalid participant auth token', ErrorCode.INVALID_PASSWORD, 401);
+    }
+
+    return participant;
+  }
+
+  private async requireRequester(authToken: string | null): Promise<StoredParticipant> {
+    if (!authToken) {
+      throw new ChatError('Participant auth token required', ErrorCode.INVALID_PASSWORD, 401);
+    }
+
+    for (const participant of this.participants.values()) {
+      if (!participant.authTokenHash) {
+        continue;
+      }
+      const valid = await verifyPassword(authToken, participant.authTokenHash);
+      if (valid) {
+        return participant;
+      }
+    }
+
+    throw new ChatError('Invalid participant auth token', ErrorCode.INVALID_PASSWORD, 401);
+  }
+
   private async handleSendMessage(request: Request): Promise<Response> {
     const sessionPassword = request.headers.get('X-Session-Password');
+    const authToken = request.headers.get('X-Auth-Token');
     if (!sessionPassword) {
       throw new ChatError('Session password required', ErrorCode.INVALID_PASSWORD, 401);
     }
@@ -311,10 +360,7 @@ export class SessionDO implements DurableObject {
     // Rate limit per participant for message sending
     this.checkRateLimit(this.sendLimiter, participant_id, 'message sending');
 
-    const participant = this.participants.get(participant_id);
-    if (!participant) {
-      throw new ChatError('Not a participant in this session', ErrorCode.NOT_PARTICIPANT, 403);
-    }
+    const participant = await this.requireParticipantAuth(participant_id, authToken);
 
     this.updateActivity();
     participant.lastSeen = Date.now();
@@ -349,6 +395,7 @@ export class SessionDO implements DurableObject {
   private async handleReadMessages(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const sessionPassword = request.headers.get('X-Session-Password');
+    const authToken = request.headers.get('X-Auth-Token');
 
     if (!sessionPassword) {
       throw new ChatError('Session password required', ErrorCode.INVALID_PASSWORD, 401);
@@ -381,10 +428,7 @@ export class SessionDO implements DurableObject {
     // Rate limit per participant for message reading
     this.checkRateLimit(this.readLimiter, participant_id, 'message reading');
 
-    const participant = this.participants.get(participant_id);
-    if (!participant) {
-      throw new ChatError('Not a participant in this session', ErrorCode.NOT_PARTICIPANT, 403);
-    }
+    const participant = await this.requireParticipantAuth(participant_id, authToken);
 
     this.updateActivity();
     participant.lastSeen = Date.now();
@@ -479,6 +523,7 @@ export class SessionDO implements DurableObject {
 
     const sessionPassword = request.headers.get('X-Session-Password');
     const adminPassword = request.headers.get('X-Admin-Password');
+    const authToken = request.headers.get('X-Auth-Token');
 
     if (!sessionPassword) {
       throw new ChatError('Session password required', ErrorCode.INVALID_PASSWORD, 401);
@@ -504,10 +549,14 @@ export class SessionDO implements DurableObject {
       throw new ChatError('Participant not found', ErrorCode.PARTICIPANT_NOT_FOUND, 404);
     }
 
-    const requestingParticipantId = url.searchParams.get('requester_id');
-    const isSelfRemoval = requestingParticipantId === participantId;
+    const requester = await this.requireRequester(authToken);
+    const isSelfRemoval = requester.id === participantId;
 
     if (!isSelfRemoval) {
+      if (!requester.isAdmin) {
+        throw new ChatError('Admin required to remove other participants', ErrorCode.ADMIN_REQUIRED, 403);
+      }
+
       const providedAdminPassword = parsed.data.admin_password;
       if (!providedAdminPassword) {
         throw new ChatError(

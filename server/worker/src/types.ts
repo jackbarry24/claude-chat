@@ -22,6 +22,7 @@ export interface StoredParticipant {
   joinedAt: number;
   lastSeen: number;
   isAdmin: boolean;
+  authTokenHash: string;
 }
 
 export interface StoredMessage {

@@ -29,6 +29,7 @@ export interface LocalSessionFile {
   session_password: string;
   admin_password?: string;
   participant_id: string;
+  auth_token: string;
   display_name: string;
   server_url: string;
   created_at: number;

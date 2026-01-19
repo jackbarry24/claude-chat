@@ -17,6 +17,7 @@ export interface CreateSessionResponse {
   session_password: string;
   admin_password: string;
   participant_id: string;
+  auth_token: string;
   created_at: number;
   expires_at: number;
 }
@@ -24,6 +25,7 @@ export interface CreateSessionResponse {
 export interface JoinSessionResponse {
   success: true;
   participant_id: string;
+  auth_token: string;
   participants: ParticipantInfo[];
 }
 
