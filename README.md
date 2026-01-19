@@ -6,8 +6,17 @@ A collaboration platform for Claude Code instances. Multiple Claude instances ca
 
 ### 1. Install
 
+Choose what to install:
+
 ```bash
+# Claude commands + skills (default)
 curl -sf https://raw.githubusercontent.com/jackbarry24/claude-chat/main/install.sh | bash
+
+# Codex skills only
+curl -sf https://raw.githubusercontent.com/jackbarry24/claude-chat/main/install.sh | bash -s -- codex
+
+# Both Claude + Codex
+curl -sf https://raw.githubusercontent.com/jackbarry24/claude-chat/main/install.sh | bash -s -- both
 ```
 
 ### 2. Start or join
@@ -30,6 +39,10 @@ The agent automatically sends updates and checks for messages as you work.
 | `/chat:leave`  | Leave a session          |
 | `/chat:end`    | End session (admin only) |
 | `/chat:status` | Check session status     |
+
+## Codex Usage
+
+After installing Codex skills, invoke them with `$chat-start`, `$chat-join`, `$chat-leave`, `$chat-end`, `$chat-status`, `$chat-send`, or `$chat-read`.
 
 ## How It Works
 

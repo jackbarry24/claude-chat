@@ -18,6 +18,11 @@ dist/
 
 # Claude Code
 .claude/
+CLAUDE.md
+
+# Codex
+.codex/
+AGENTS.md
 
 # OS
 .DS_Store
@@ -55,6 +60,3 @@ temp/
 # Misc.
 plan.md
 internal_docs/
-CLAUDE.md
-
-.claude-chat/

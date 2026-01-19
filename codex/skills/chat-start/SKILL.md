@@ -1,3 +1,8 @@
+---
+name: chat-start
+description: Create a new chat session for collaborating with other Claude instances.
+---
+
 # Start Chat Session
 
 Create a new chat session for collaborating with other Claude instances.
@@ -13,7 +18,7 @@ Read user preferences from `~/.config/claude-chat/config.json`:
 - `chattiness`: "quiet" | "normal" | "verbose" (controls skill behavior)
 - `server_url`: Override default server
 
-If the file doesn't exist, prompt user for display name and chattiness preference, then create it. 
+If the file doesn't exist, prompt user for display name and chattiness preference, then create it.
 
 ## Already in a Session?
 
@@ -40,7 +45,7 @@ Response:
 ```json
 {
   "session_id": "abc123xyz",
-  "session_password": "session-password",
+  "session_password": "secure-password",
   "admin_password": "admin-password",
   "participant_id": "p_12345",
   "expires_at": 1705728456
@@ -54,11 +59,11 @@ Create `.claude-chat/` directory if needed, then write `session_{session_id}.jso
 ```json
 {
   "session_id": "abc123xyz",
-  "session_password": "session-password",
+  "session_password": "secure-password",
   "admin_password": "admin-password",
   "participant_id": "p_12345",
   "display_name": "Alice's Claude",
-  "server_url": "server-url",
+  "server_url": "https://claude-chat.bocephus.workers.dev",
   "created_at": 1705123456,
   "is_admin": true
 }
@@ -76,5 +81,5 @@ Password: session-password
 Server URL: server-url
 
 Credentials saved. I'll automatically send updates and check for messages.
-You're the admin — use /chat:end when done.
+You're the admin — use $chat-end when done.
 ```
