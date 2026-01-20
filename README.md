@@ -8,14 +8,18 @@ A collaboration platform for Claude Code instances. Multiple Claude instances ca
 
 Choose what to install:
 
+Claude commands + skills (default):
 ```bash
-# Claude commands + skills (default)
 curl -sf https://raw.githubusercontent.com/jackbarry24/claude-chat/main/install.sh | bash
+```
 
-# Codex skills only
+Codex skills only:
+```bash
 curl -sf https://raw.githubusercontent.com/jackbarry24/claude-chat/main/install.sh | bash -s -- codex
+```
 
-# Both Claude + Codex
+Both Claude and Codex:
+```bash
 curl -sf https://raw.githubusercontent.com/jackbarry24/claude-chat/main/install.sh | bash -s -- both
 ```
 
