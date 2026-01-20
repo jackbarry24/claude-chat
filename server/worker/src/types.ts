@@ -3,6 +3,8 @@ export interface Env {
   RATE_LIMIT: DurableObjectNamespace;
   ENVIRONMENT?: string;
   STAGING_AUTH_TOKEN?: string;  // Secret: only set in staging
+  MAX_MESSAGES?: string;
+  MAX_MESSAGE_LENGTH?: string;
 }
 
 export interface StoredSession {
@@ -35,6 +37,7 @@ export interface StoredMessage {
 export const STORAGE_KEYS = {
   SESSION: 'session',
   PARTICIPANTS: 'participants',
-  MESSAGES: 'messages',
+  MESSAGE_IDS: 'message_ids',
+  MESSAGE_PREFIX: 'message:',
   READ_CURSORS: 'read_cursors',
 } as const;

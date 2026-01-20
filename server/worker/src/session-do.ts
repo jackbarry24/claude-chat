@@ -40,11 +40,15 @@ import { RateLimiter, RATE_LIMITS } from './rate-limiter.js';
 
 export class SessionDO implements DurableObject {
   private state: DurableObjectState;
+  private env: Env;
   private session: StoredSession | null = null;
   private participants: Map<string, StoredParticipant> = new Map();
   private messages: StoredMessage[] = [];
+  private messageIds: string[] = [];
   private readCursors: Map<string, string> = new Map();
   private initialized = false;
+  private maxMessages: number;
+  private maxMessageLength: number;
 
   // Rate limiters (in-memory, reset on DO eviction which is acceptable)
   private joinLimiter = new RateLimiter(RATE_LIMITS.SESSION_JOIN);
@@ -52,8 +56,17 @@ export class SessionDO implements DurableObject {
   private readLimiter = new RateLimiter(RATE_LIMITS.MESSAGE_READ);
   private generalLimiter = new RateLimiter(RATE_LIMITS.GENERAL);
 
-  constructor(state: DurableObjectState, _env: Env) {
+  constructor(state: DurableObjectState, env: Env) {
     this.state = state;
+    this.env = env;
+    const maxMessagesEnv = Number.parseInt(env.MAX_MESSAGES ?? '', 10);
+    this.maxMessages = Number.isFinite(maxMessagesEnv) && maxMessagesEnv > 0
+      ? maxMessagesEnv
+      : MAX_MESSAGES;
+    const maxMessageLengthEnv = Number.parseInt(env.MAX_MESSAGE_LENGTH ?? '', 10);
+    this.maxMessageLength = Number.isFinite(maxMessageLengthEnv) && maxMessageLengthEnv > 0
+      ? maxMessageLengthEnv
+      : 50_000;
   }
 
   /**
@@ -73,27 +86,90 @@ export class SessionDO implements DurableObject {
   private async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    const [session, participants, messages, readCursors] = await Promise.all([
+    const [session, participants, messageIds, readCursors] = await Promise.all([
       this.state.storage.get<StoredSession>(STORAGE_KEYS.SESSION),
       this.state.storage.get<Record<string, StoredParticipant>>(STORAGE_KEYS.PARTICIPANTS),
-      this.state.storage.get<StoredMessage[]>(STORAGE_KEYS.MESSAGES),
+      this.state.storage.get<string[]>(STORAGE_KEYS.MESSAGE_IDS),
       this.state.storage.get<Record<string, string>>(STORAGE_KEYS.READ_CURSORS),
     ]);
 
     this.session = session ?? null;
     this.participants = new Map(Object.entries(participants ?? {}));
-    this.messages = messages ?? [];
+
+    let loadedMessageIds = messageIds ?? [];
+    let loadedMessages: StoredMessage[] = [];
+
+    if (loadedMessageIds.length > 0) {
+      const messageKeys = loadedMessageIds.map((id) => this.messageKey(id));
+      const lookup = new Map<string, StoredMessage>();
+      for (const chunk of this.chunk(messageKeys)) {
+        const messageMap = await this.state.storage.get<StoredMessage>(chunk);
+        if (messageMap instanceof Map) {
+          for (const [key, value] of messageMap.entries()) {
+            lookup.set(key, value);
+          }
+        }
+      }
+      loadedMessages = loadedMessageIds
+        .map((id) => lookup.get(this.messageKey(id)))
+        .filter((message): message is StoredMessage => Boolean(message));
+      const normalizedMessageIds = loadedMessages.map((message) => message.id);
+      if (normalizedMessageIds.length !== loadedMessageIds.length) {
+        loadedMessageIds = normalizedMessageIds;
+        await this.state.storage.put({ [STORAGE_KEYS.MESSAGE_IDS]: loadedMessageIds });
+      }
+    }
+
+    if (loadedMessageIds.length > this.maxMessages) {
+      const excessCount = loadedMessageIds.length - this.maxMessages;
+      const removedIds = loadedMessageIds.slice(0, excessCount);
+      loadedMessageIds = loadedMessageIds.slice(-this.maxMessages);
+      loadedMessages = loadedMessages.slice(-this.maxMessages);
+      await this.state.storage.put({ [STORAGE_KEYS.MESSAGE_IDS]: loadedMessageIds });
+      for (const chunk of this.chunk(removedIds)) {
+        await this.state.storage.delete(chunk.map((id) => this.messageKey(id)));
+      }
+    }
+
+    this.messages = loadedMessages;
+    this.messageIds = loadedMessageIds;
     this.readCursors = new Map(Object.entries(readCursors ?? {}));
     this.initialized = true;
   }
 
-  private async save(): Promise<void> {
+  private messageKey(messageId: string): string {
+    return `${STORAGE_KEYS.MESSAGE_PREFIX}${messageId}`;
+  }
+
+  private chunk<T>(items: T[], size = 128): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) {
+      chunks.push(items.slice(i, i + size));
+    }
+    return chunks;
+  }
+
+  private async saveMetadata(extra: Record<string, unknown> = {}): Promise<void> {
     await this.state.storage.put({
       [STORAGE_KEYS.SESSION]: this.session,
       [STORAGE_KEYS.PARTICIPANTS]: Object.fromEntries(this.participants),
-      [STORAGE_KEYS.MESSAGES]: this.messages,
       [STORAGE_KEYS.READ_CURSORS]: Object.fromEntries(this.readCursors),
+      ...extra,
     });
+  }
+
+  private async persistMessage(message: StoredMessage, removedMessages: StoredMessage[]): Promise<void> {
+    await this.saveMetadata({
+      [this.messageKey(message.id)]: message,
+      [STORAGE_KEYS.MESSAGE_IDS]: this.messageIds,
+    });
+
+    if (removedMessages.length > 0) {
+      const removedKeys = removedMessages.map((item) => this.messageKey(item.id));
+      for (const chunk of this.chunk(removedKeys)) {
+        await this.state.storage.delete(chunk);
+      }
+    }
   }
 
   private updateActivity(): void {
@@ -219,7 +295,7 @@ export class SessionDO implements DurableObject {
     };
     this.participants.set(participantId, participant);
 
-    await this.save();
+    await this.saveMetadata();
 
     // Schedule cleanup alarm for when session expires (plus 1 minute buffer)
     await this.scheduleCleanup(SESSION_TTL_MS + 60_000);
@@ -281,7 +357,7 @@ export class SessionDO implements DurableObject {
     };
     this.participants.set(participantId, participant);
 
-    await this.save();
+    await this.saveMetadata();
 
     const participantsList = Array.from(this.participants.values()).map((p) =>
       toParticipantInfo(p)
@@ -356,6 +432,13 @@ export class SessionDO implements DurableObject {
     }
 
     const { participant_id, content } = parsed.data;
+    if (content.length > this.maxMessageLength) {
+      throw new ChatError(
+        `Message must be ${this.maxMessageLength} characters or less`,
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
 
     // Rate limit per participant for message sending
     this.checkRateLimit(this.sendLimiter, participant_id, 'message sending');
@@ -377,11 +460,17 @@ export class SessionDO implements DurableObject {
 
     this.messages.push(message);
 
-    if (this.messages.length > MAX_MESSAGES) {
-      this.messages = this.messages.slice(-MAX_MESSAGES);
+    this.messageIds.push(message.id);
+
+    let removedMessages: StoredMessage[] = [];
+    if (this.messages.length > this.maxMessages) {
+      const excessCount = this.messages.length - this.maxMessages;
+      removedMessages = this.messages.slice(0, excessCount);
+      this.messages = this.messages.slice(-this.maxMessages);
+      this.messageIds = this.messageIds.slice(-this.maxMessages);
     }
 
-    await this.save();
+    await this.persistMessage(message, removedMessages);
 
     const response: SendMessageResponse = {
       success: true,
@@ -452,7 +541,7 @@ export class SessionDO implements DurableObject {
       this.readCursors.set(participant_id, lastMessage.id);
     }
 
-    await this.save();
+    await this.saveMetadata();
 
     const participantsMap: Map<string, ParticipantLike> = new Map(this.participants);
 
@@ -478,7 +567,7 @@ export class SessionDO implements DurableObject {
     }
 
     this.updateActivity();
-    await this.save();
+    await this.saveMetadata();
 
     const participantsList = Array.from(this.participants.values()).map((p) =>
       toParticipantInfo(p)
@@ -504,7 +593,7 @@ export class SessionDO implements DurableObject {
     }
 
     this.updateActivity();
-    await this.save();
+    await this.saveMetadata();
 
     const response: SessionInfoResponse = {
       session_id: this.session!.id,
@@ -576,7 +665,7 @@ export class SessionDO implements DurableObject {
     this.readCursors.delete(participantId);
     this.updateActivity();
 
-    await this.save();
+    await this.saveMetadata();
 
     const response: SuccessResponse = {
       success: true,
@@ -598,7 +687,7 @@ export class SessionDO implements DurableObject {
     }
 
     this.session!.ended = true;
-    await this.save();
+    await this.saveMetadata();
 
     // Schedule cleanup alarm for 1 minute from now
     await this.scheduleCleanup(60_000);

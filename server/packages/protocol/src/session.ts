@@ -37,9 +37,9 @@ export interface LocalSessionFile {
 }
 
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-export const MAX_MESSAGES = 1000;
-export const DEFAULT_MESSAGE_LIMIT = 100;
-export const MAX_MESSAGE_LIMIT = 500;
+export const MAX_MESSAGES = 200;
+export const DEFAULT_MESSAGE_LIMIT = 50;
+export const MAX_MESSAGE_LIMIT = 200;
 export const MAX_PARTICIPANTS = 3;
 
 export function generateSessionId(): string {

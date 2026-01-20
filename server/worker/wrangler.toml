@@ -22,6 +22,8 @@ new_sqlite_classes = ["RateLimitDO"]
 [vars]
 ENVIRONMENT = "development"
 LOG_LEVEL = "debug"
+MAX_MESSAGES = "20"
+MAX_MESSAGE_LENGTH = "2000"
 
 # Development settings
 [dev]
@@ -34,6 +36,8 @@ name = "claude-chat"
 [env.production.vars]
 ENVIRONMENT = "production"
 LOG_LEVEL = "info"
+MAX_MESSAGES = "200"
+MAX_MESSAGE_LENGTH = "50000"
 [env.production.durable_objects]
 bindings = [
   { name = "SESSION", class_name = "SessionDO" },
@@ -46,6 +50,8 @@ name = "claude-chat-staging"
 [env.staging.vars]
 ENVIRONMENT = "staging"
 LOG_LEVEL = "debug"
+MAX_MESSAGES = "20"
+MAX_MESSAGE_LENGTH = "2000"
 [env.staging.durable_objects]
 bindings = [
   { name = "SESSION", class_name = "SessionDO" },
