@@ -15,7 +15,7 @@
         "test:coverage": "vitest run --coverage",
         "test:integration": "vitest run --config vitest.integration.config.ts",
         "test:integration:local": "SERVER_URL=http://localhost:8787 vitest run --config vitest.integration.config.ts",
-        "test:integration:staging": "SERVER_URL=https://claude-chat-staging.bocephus.workers.dev vitest run --config vitest.integration.config.ts",
+        "test:integration:staging": "dotenv -e .env -- sh -c 'SERVER_URL=https://claude-chat-staging.bocephus.workers.dev vitest run --config vitest.integration.config.ts'",
         "test:integration:production": "SERVER_URL=https://claude-chat.bocephus.workers.dev vitest run --config vitest.integration.config.ts",
         "typecheck": "tsc --noEmit",
         "tail": "wrangler tail",
@@ -29,6 +29,7 @@
     "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.8.0",
         "@cloudflare/workers-types": "^4.20250109.0",
+        "dotenv-cli": "^11.0.0",
         "typescript": "^5.4.0",
         "vitest": "^2.1.0",
         "wrangler": "^4.35.0"
