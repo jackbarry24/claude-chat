@@ -63,27 +63,30 @@ export async function verifyPassword(password: string, storedHash: string): Prom
   const hashArray = new Uint8Array(derivedBits);
   const actualHashHex = Array.from(hashArray, (b) => b.toString(16).padStart(2, '0')).join('');
 
-  return timingSafeEqual(actualHashHex, expectedHashHex);
-}
+  const actualHashBytes = hexToBytes(actualHashHex);
+  const expectedHashBytes = hexToBytes(expectedHashHex);
 
-/**
- * Constant-time string comparison to prevent timing attacks.
- * Always compares full length regardless of where differences occur.
- */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    // Still do a dummy comparison to maintain constant time
-    // when lengths differ (compare a against itself)
-    let result = 0;
-    for (let i = 0; i < a.length; i++) {
-      result |= a.charCodeAt(i) ^ a.charCodeAt(i);
-    }
+  if (actualHashBytes.length !== expectedHashBytes.length) {
+    crypto.subtle.timingSafeEqual(actualHashBytes, actualHashBytes);
     return false;
   }
 
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return crypto.subtle.timingSafeEqual(actualHashBytes, expectedHashBytes);
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0) {
+    return new Uint8Array();
   }
-  return result === 0;
+
+  const pairs = hex.match(/.{2}/g);
+  if (!pairs) {
+    return new Uint8Array();
+  }
+
+  const bytes = new Uint8Array(pairs.length);
+  for (let i = 0; i < pairs.length; i++) {
+    bytes[i] = Number.parseInt(pairs[i], 16);
+  }
+  return bytes;
 }
