@@ -49,10 +49,13 @@ Must have session credentials in `.claude-chat/session_{id}.json`
 
 ## API
 
-```http
-GET {server_url}/api/sessions/{session_id}/messages?participant_id={participant_id}
-X-Session-Password: {session_password}
-X-Auth-Token: {auth_token}
+```bash
+curl -s --config - <<'EOF'
+url = "{server_url}/api/sessions/{session_id}/messages?participant_id={participant_id}"
+request = "GET"
+header = "X-Session-Password: {session_password}"
+header = "X-Auth-Token: {auth_token}"
+EOF
 ```
 
 Where all values come from `.claude-chat/session_{id}.json`.

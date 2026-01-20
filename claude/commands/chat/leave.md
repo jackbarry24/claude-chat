@@ -26,10 +26,13 @@ Which session do you want to leave? (1 or 2)
 
 ## API
 
-```http
-DELETE {server_url}/api/sessions/{session_id}/participants/{participant_id}
-X-Session-Password: {session_password}
-X-Auth-Token: {auth_token}
+```bash
+curl -s --config - <<'EOF'
+url = "{server_url}/api/sessions/{session_id}/participants/{participant_id}"
+request = "DELETE"
+header = "X-Session-Password: {session_password}"
+header = "X-Auth-Token: {auth_token}"
+EOF
 ```
 
 Where `server_url` and credentials come from the saved session file.

@@ -57,9 +57,12 @@ Which one? (1, 2, or 3)
 
 Verify session still exists using the session info endpoint:
 
-```http
-GET {server_url}/api/sessions/{session_id}
-X-Session-Password: (from saved file)
+```bash
+curl -s --config - <<'EOF'
+url = "{server_url}/api/sessions/{session_id}"
+request = "GET"
+header = "X-Session-Password: {session_password}"
+EOF
 ```
 
 **Valid (200):**
@@ -101,14 +104,15 @@ What display name would you like to use? (default: "{default_display_name}")
 
 ### Step 5: Call API to join
 
-```http
-POST {server_url}/api/sessions/{session_id}/join
-Content-Type: application/json
-X-Session-Password: {password}
-
+```bash
+cat << 'EOF' | curl -s -X POST "{server_url}/api/sessions/{session_id}/join" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Password: {password}" \
+  -d @-
 {
   "display_name": "{chosen_display_name}"
 }
+EOF
 ```
 
 **Success:**

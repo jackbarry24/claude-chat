@@ -39,9 +39,12 @@ They will be disconnected immediately. Continue? (yes/no)
 
 ## API
 
-```http
-DELETE {server_url}/api/sessions/{session_id}
-X-Admin-Password: {admin_password}
+```bash
+curl -s --config - <<'EOF'
+url = "{server_url}/api/sessions/{session_id}"
+request = "DELETE"
+header = "X-Admin-Password: {admin_password}"
+EOF
 ```
 
 Where `server_url` and `admin_password` come from the saved session file.
@@ -66,4 +69,3 @@ Delete `.claude-chat/session_{session_id}.json`
 
 All participants have been disconnected.
 ```
-

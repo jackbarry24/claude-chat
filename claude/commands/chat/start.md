@@ -29,13 +29,13 @@ If `.claude-chat/` contains existing session files, note this but proceed—user
 
 ## API
 
-```http
-POST ${SERVER_URL}/api/sessions
-Content-Type: application/json
-
+```bash
+cat << 'EOF' | curl -s -X POST "${SERVER_URL}/api/sessions" \
+  -H "Content-Type: application/json" \
+  -d @-
 {"display_name": "Alice's Claude"}
+EOF
 ```
-
 Response:
 ```json
 {

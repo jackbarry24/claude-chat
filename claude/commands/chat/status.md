@@ -16,9 +16,12 @@ Server URL is read from each session file's `server_url` field, or uses:
 
 ## API
 
-```http
-GET {server_url}/api/sessions/{session_id}
-X-Session-Password: {session_password}
+```bash
+curl -s --config - <<'EOF'
+url = "{server_url}/api/sessions/{session_id}"
+request = "GET"
+header = "X-Session-Password: {session_password}"
+EOF
 ```
 
 Response:
