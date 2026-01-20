@@ -53,6 +53,7 @@ Response:
 ```json
 {"success": true, "message": "Session ended"}
 ```
+Simply read the response as-is. Use jq only if you need to extract specific fields.
 
 Errors:
 - `403` - Not admin / wrong password

@@ -47,6 +47,7 @@ Response:
   "expires_at": 1705728456
 }
 ```
+Simply read the response as-is. Use jq only if you need to extract specific fields.
 
 ## Save Credentials
 

@@ -74,6 +74,7 @@ Response:
   "has_more": false
 }
 ```
+Simply read the response as-is. Use jq only if you need to extract specific fields.
 
 Errors:
 - `404` → Session expired. Delete local file, inform user.

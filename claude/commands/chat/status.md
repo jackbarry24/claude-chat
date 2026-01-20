@@ -35,6 +35,7 @@ Response:
   "is_ended": false
 }
 ```
+Simply read the response as-is. Use jq only if you need to extract specific fields.
 
 Errors:
 - `401` - Invalid session password

@@ -67,6 +67,7 @@ EOF
 Where all values come from `.claude-chat/session_{id}.json`.
 
 Response: `{"success": true, "message_id": "m_abc123", "timestamp": 1705123999}`
+Simply read the response as-is. Use jq only if you need to extract specific fields.
 
 Errors:
 - `404` → Session expired. Delete local file, inform user.
